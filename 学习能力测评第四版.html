@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>中小学生学习能力综合测评 - 知行教育研究院</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 全局样式 */
+        body { font-family: 'Microsoft YaHei', 'Heiti SC', sans-serif; background: #f5f7fa radial-gradient(#e0e7ff 1px, transparent 1px); background-size: 15px 15px; padding-bottom: 20px; }
+        .section { display: none; }
+        .active { display: block; }
+        .option { padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; transition: all 0.3s ease; cursor: pointer; font-size: 16px; }
+        .option:hover { background: #f0f9ff; border-color: #60a5fa; transform: translateY(-2px); }
+        .option.selected { background: #3b82f6; color: #fff; border-color: #2563eb; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); }
+        .progress-bar { transition: width 0.3s ease; }
+        .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 20px; }
+        .card:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+        .btn { border: none; border-radius: 8px; padding: 14px 24px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; width: 100%; margin-bottom: 12px; }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+        .btn-primary:hover { background: linear-gradient(135deg, #2563eb, #1d4ed8); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #ddd; }
+        .btn-secondary:hover { background: #e5e7eb; border-color: #ccc; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-blue { background: #dbeafe; color: #2563eb; }
+        .badge-green { background: #d1fae5; color: #059669; }
+        .badge-yellow { background: #fef3c7; color: #d97706; }
+        
+        /* 管理入口 */
+        .admin-entry { position: fixed; bottom: 20px; right: 20px; background: #2563eb; color: #fff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); cursor: pointer; z-index: 999; transition: all 0.3s ease; }
+        .admin-entry:hover { transform: scale(1.1); background: #1d4ed8; }
+        .admin-modal, .report-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
+        .admin-modal.active, .report-modal.active { display: flex; }
+        .admin-content, .report-content { background: #fff; padding: 24px; border-radius: 12px; width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; }
+        .admin-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+        .admin-table th, .admin-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+        .admin-table th { background: #f8fafc; font-weight: 600; }
+        .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .close-report { background: none; border: none; color: #666; font-size: 24px; cursor: pointer; transition: color 0.3s ease; }
+        .close-report:hover { color: #333; }
+        
+        /* 响应式适配 */
+        @media (min-width: 768px) {
+            .btn { width: auto; margin-bottom: 0; }
+            .btn-secondary { margin-right: 12px; }
+        }
+        @media (max-width: 767px) {
+            .p-6 { padding: 16px !important; }
+            .p-8 { padding: 20px !important; }
+            .text-4xl { font-size: 28px !important; }
+            .text-3xl { font-size: 24px !important; }
+            .text-2xl { font-size: 20px !important; }
+            .text-xl { font-size: 18px !important; }
+            .text-lg { font-size: 16px !important; }
+            .grid-cols-1 md:grid-cols-3, .grid-cols-1 md:grid-cols-2 { grid-template-columns: 1fr !important; }
+            .flex.justify-between:not(.result-section .flex.justify-between) { flex-direction: column !important; }
+            .question-nav { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+            .result-section .btn { padding: 10px 16px !important; font-size: 14px !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-4 md:p-8">
+        <!-- 封面页 -->
+        <div id="coverSection" class="section active min-h-[80vh] flex flex-col items-center justify-center text-center">
+            <div class="card w-full p-6 md:p-12">
+                <div class="flex flex-col items-center">
+                    <div class="bg-blue-100 p-4 rounded-full mb-6"><i class="fa-solid fa-graduation-cap text-4xl text-blue-600"></i></div>
+                    <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">中小学生学习能力综合测评</h1>
+                    <div class="badge badge-blue mb-6">知行教育研究院 研发</div>
+                    
+                    <div class="text-gray-600 text-lg mb-8 max-w-3xl">
+                        基于国际经典测评工具（如 MSLQ 学习动机策略问卷、GSES 自我效能感量表等），结合 1-9 年级学生认知特点，
+                        涵盖学习动力、学习策略、学习习惯三大主题。题目采用李克特量表形式，兼顾科学性与实操性。
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 w-full max-w-2xl">
+                        <div class="bg-blue-50 p-6 rounded-lg text-left"><i class="fa-solid fa-bolt text-blue-500 text-2xl mb-3"></i><h3 class="font-bold text-lg text-gray-800 mb-2">学习动力</h3><p class="text-gray-600 text-sm">学习动机、目标设定、自我效能感、学业归因等</p></div>
+                        <div class="bg-green-50 p-6 rounded-lg text-left"><i class="fa-solid fa-cogs text-green-500 text-2xl mb-3"></i><h3 class="font-bold text-lg text-gray-800 mb-2">学习策略</h3><p class="text-gray-600 text-sm">认知策略、元认知策略、知识整合等</p></div>
+                        <div class="bg-yellow-50 p-6 rounded-lg text-left"><i class="fa-solid fa-habit text-yellow-500 text-2xl mb-3"></i><h3 class="font-bold text-lg text-gray-800 mb-2">学习习惯</h3><p class="text-gray-600 text-sm">学习流程、自我管理、专注力等</p></div>
+                    </div>
+                    
+                    <button id="startTestBtn" class="btn btn-primary"><i class="fa-solid fa-arrow-right mr-2"></i>开始测评</button>
+                </div>
+            </div>
+            <div class="text-gray-500 text-sm">完成时间：约15分钟 | 适用年级：1-9年级 | 测评结果可下载PDF报告</div>
+        </div>
+
+        <!-- 基本信息填写区 -->
+        <div id="infoSection" class="section">
+            <div class="card w-full p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center"><i class="fa-solid fa-user-circle text-blue-500 mr-3"></i>填写基本信息</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label class="block text-gray-700 mb-2 font-medium" for="name">姓名 <span class="text-red-500">*</span></label><input type="text" id="name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required></div>
+                    <div><label class="block text-gray-700 mb-2 font-medium" for="grade">年级 <span class="text-red-500">*</span></label><select id="grade" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required><option value="">请选择</option><option value="1">1年级</option><option value="2">2年级</option><option value="3">3年级</option><option value="4">4年级</option><option value="5">5年级</option><option value="6">6年级</option><option value="7">7年级</option><option value="8">8年级</option><option value="9">9年级</option></select></div>
+                    <div><label class="block text-gray-700 mb-2 font-medium" for="school">学校 <span class="text-red-500">*</span></label><input type="text" id="school" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required></div>
+                    <div><label class="block text-gray-700 mb-2 font-medium" for="phone">联系电话 <span class="text-red-500">*</span></label><input type="tel" id="phone" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required></div>
+                </div>
+                <div class="mt-8 flex justify-end flex-col md:flex-row">
+                    <button id="backToCoverBtn" class="btn btn-secondary mr-0 md:mr-4"><i class="fa-solid fa-arrow-left mr-2"></i>返回</button>
+                    <button id="startQuizBtn" class="btn btn-primary">进入答题 <i class="fa-solid fa-arrow-right mr-2"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 测评答题区 -->
+        <div id="quizSection" class="section">
+            <div class="card w-full p-6 md:p-8">
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-6"><div id="progressBar" class="progress-bar bg-blue-600 h-3 rounded-full" style="width: 0%"></div></div>
+                <div class="flex justify-between items-center mb-6 question-nav">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center"><i class="fa-solid fa-question-circle text-blue-500 mr-3"></i>答题区</h2>
+                    <span id="questionCount" class="text-gray-600 font-medium">第 1 题 / 共 48 题</span>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                    <div id="currentTheme" class="badge badge-blue mb-3">主题：学习动力 - 学习动机</div>
+                    <div id="questionContainer" class="text-xl text-gray-800 min-h-[100px] flex items-center"></div>
+                </div>
+                <div id="optionsContainer" class="grid grid-cols-1 gap-3 mb-8"></div>
+                <div class="flex justify-between">
+                    <button id="prevBtn" class="btn btn-secondary" disabled><i class="fa-solid fa-arrow-left mr-2"></i>上一题</button>
+                    <button id="nextBtn" class="btn btn-primary">下一题 <i class="fa-solid fa-arrow-right mr-2"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果展示区 -->
+        <div id="resultSection" class="section result-section">
+            <div class="card w-full p-6 md:p-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center"><i class="fa-solid fa-chart-radar text-blue-500 mr-3"></i>测评结果报告</h2>
+                    <button id="downloadPdfBtn" class="btn btn-primary"><i class="fa-solid fa-download mr-2"></i>下载PDF</button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-6 border-b border-gray-200">
+                    <div><h3 class="text-lg font-bold text-gray-700 mb-4">基本信息</h3><p id="userInfo" class="text-gray-600 space-y-2 text-lg"></p></div>
+                    <div><h3 class="text-lg font-bold text-gray-700 mb-4">测评概况</h3><p class="text-gray-600 space-y-2 text-lg"><span><i class="fa-solid fa-calendar-check text-blue-500 mr-2"></i>测评日期：<span id="testDate"></span></span><span><i class="fa-solid fa-clock text-blue-500 mr-2"></i>预计完成时间：15分钟</span><span><i class="fa-solid fa-check-circle text-blue-500 mr-2"></i>测评维度：3大主题，10个子维度</span><span><i class="fa-solid fa-award text-blue-500 mr-2"></i>研发机构：知行教育研究院</span></p></div>
+                </div>
+
+                <div class="mb-10"><h3 class="text-xl font-bold text-gray-800 mb-4">学习能力维度雷达图</h3><div class="w-full h-64 md:h-96 bg-gray-50 p-4 rounded-lg"><canvas id="radarChart"></canvas></div></div>
+
+                <div id="analysisContainer" class="space-y-6 mb-10">
+                    <div class="p-6 bg-blue-50 rounded-lg border-l-4 border-blue-500"><h3 class="text-xl font-bold text-blue-800 mb-3 flex items-center"><i class="fa-solid fa-bolt mr-2"></i>一、学习动力分析</h3><p id="motivationAnalysis" class="text-gray-700 text-lg leading-relaxed"></p></div>
+                    <div class="p-6 bg-green-50 rounded-lg border-l-4 border-green-500"><h3 class="text-xl font-bold text-green-800 mb-3 flex items-center"><i class="fa-solid fa-cogs mr-2"></i>二、学习策略分析</h3><p id="strategyAnalysis" class="text-gray-700 text-lg leading-relaxed"></p></div>
+                    <div class="p-6 bg-yellow-50 rounded-lg border-l-4 border-yellow-500"><h3 class="text-xl font-bold text-yellow-800 mb-3 flex items-center"><i class="fa-solid fa-habit mr-2"></i>三、学习习惯分析</h3><p id="habitAnalysis" class="text-gray-700 text-lg leading-relaxed"></p></div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-lightbulb text-blue-500 mr-3"></i>个性化提升方案</h3>
+                    <ul id="solutionList" class="list-disc list-inside text-gray-700 space-y-3 text-lg"></ul>
+                </div>
+
+                <div class="flex justify-center"><button id="restartBtn" class="btn btn-secondary"><i class="fa-solid fa-refresh mr-2"></i>重新测评</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理员入口 -->
+    <div class="admin-entry" id="adminEntry"><i class="fa-solid fa-database text-xl"></i></div>
+
+    <!-- 管理员模态框 -->
+    <div class="admin-modal" id="adminModal">
+        <div class="admin-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">测评数据管理</h3>
+                <button id="closeAdminModal" class="text-gray-500 hover:text-gray-700"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="mb-6">
+                <button id="exportCsvBtn" class="btn btn-primary"><i class="fa-solid fa-file-csv mr-2"></i>导出所有数据(CSV)</button>
+                <button id="clearDataBtn" class="btn btn-secondary"><i class="fa-solid fa-trash mr-2"></i>清空所有数据</button>
+            </div>
+            <div class="mb-4"><h4 class="font-bold text-lg text-gray-700 mb-2">测评记录列表</h4><p class="text-gray-500 text-sm">共 <span id="recordCount">0</span> 条记录</p></div>
+            <div class="overflow-x-auto">
+                <table class="admin-table">
+                    <thead><tr><th>序号</th><th>姓名</th><th>年级</th><th>学校</th><th>电话</th><th>测评日期</th><th>操作</th></tr></thead>
+                    <tbody id="recordTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报告查看模态框 -->
+    <div class="report-modal" id="reportModal">
+        <div class="report-content">
+            <div class="report-header">
+                <h3 class="text-2xl font-bold text-gray-800">测评报告详情</h3>
+                <button class="close-report" id="closeReportModal"><i class="fa-solid fa-times"></i></button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-6 border-b border-gray-200">
+                <div><h3 class="text-lg font-bold text-gray-700 mb-4">基本信息</h3><p id="reportUserInfo" class="text-gray-600 space-y-2 text-lg"></p></div>
+                <div><h3 class="text-lg font-bold text-gray-700 mb-4">测评概况</h3><p class="text-gray-600 space-y-2 text-lg"><span><i class="fa-solid fa-calendar-check text-blue-500 mr-2"></i>测评日期：<span id="reportTestDate"></span></span><span><i class="fa-solid fa-clock text-blue-500 mr-2"></i>预计完成时间：15分钟</span><span><i class="fa-solid fa-check-circle text-blue-500 mr-2"></i>测评维度：3大主题，10个子维度</span><span><i class="fa-solid fa-award text-blue-500 mr-2"></i>研发机构：知行教育研究院</span></p></div>
+            </div>
+
+            <div class="mb-10"><h3 class="text-xl font-bold text-gray-800 mb-4">学习能力维度雷达图</h3><div class="w-full h-64 md:h-96 bg-gray-50 p-4 rounded-lg"><canvas id="reportRadarChart"></canvas></div></div>
+
+            <div id="reportAnalysisContainer" class="space-y-6 mb-10">
+                <div class="p-6 bg-blue-50 rounded-lg border-l-4 border-blue-500"><h3 class="text-xl font-bold text-blue-800 mb-3 flex items-center"><i class="fa-solid fa-bolt mr-2"></i>一、学习动力分析</h3><p id="reportMotivationAnalysis" class="text-gray-700 text-lg leading-relaxed"></p></div>
+                <div class="p-6 bg-green-50 rounded-lg border-l-4 border-green-500"><h3 class="text-xl font-bold text-green-800 mb-3 flex items-center"><i class="fa-solid fa-cogs mr-2"></i>二、学习策略分析</h3><p id="reportStrategyAnalysis" class="text-gray-700 text-lg leading-relaxed"></p></div>
+                <div class="p-6 bg-yellow-50 rounded-lg border-l-4 border-yellow-500"><h3 class="text-xl font-bold text-yellow-800 mb-3 flex items-center"><i class="fa-solid fa-habit mr-2"></i>三、学习习惯分析</h3><p id="reportHabitAnalysis" class="text-gray-700 text-lg leading-relaxed"></p></div>
+            </div>
+
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-lightbulb text-blue-500 mr-3"></i>个性化提升方案</h3>
+                <ul id="reportSolutionList" class="list-disc list-inside text-gray-700 space-y-3 text-lg"></ul>
+            </div>
+
+            <div class="flex justify-end"><button id="reportDownloadPdfBtn" class="btn btn-primary"><i class="fa-solid fa-download mr-2"></i>下载PDF报告</button></div>
+        </div>
+    </div>
+
+    <script>
+        // 核心配置数据
+        const config = {
+            questions: [
+                // 学习动力（20题）
+                {id:1,type:"motivation",subType:"motive",content:"我觉得学习新知识本身很有趣，不需要别人催促也会主动学。"},
+                {id:2,type:"motivation",subType:"motive",content:"我努力学习是因为想获得老师或家长的表扬。"},
+                {id:3,type:"motivation",subType:"motive",content:"即使没有考试，我也愿意探索自己感兴趣的学习内容。"},
+                {id:4,type:"motivation",subType:"motive",content:"我学习主要是为了避免考试不及格或受到批评。"},
+                {id:5,type:"motivation",subType:"goal",content:"我清楚自己每个阶段的学习目标（如本学期要掌握的知识点）。"},
+                {id:6,type:"motivation",subType:"goal",content:"我会把大目标拆成小任务一步步完成。"},
+                {id:7,type:"motivation",subType:"goal",content:"我能根据自己的情况调整学习目标，不会定过高或过低的要求。"},
+                {id:8,type:"motivation",subType:"goal",content:"我知道达成学习目标对自己的意义（如提升能力、实现梦想）。"},
+                {id:9,type:"motivation",subType:"selfEfficacy",content:"遇到难题时，我相信只要努力就能找到解决方法。"},
+                {id:10,type:"motivation",subType:"selfEfficacy",content:"即使学习任务变难，我也觉得自己能应付。"},
+                {id:11,type:"motivation",subType:"selfEfficacy",content:"我对自己的学习能力有信心，不会因为一次失败就怀疑自己。"},
+                {id:12,type:"motivation",subType:"selfEfficacy",content:"面对新的学习内容，我相信自己能快速适应并掌握。"},
+                {id:13,type:"motivation",subType:"attribution",content:"我成绩好主要是因为自己付出了足够的努力。"},
+                {id:14,type:"motivation",subType:"attribution",content:"如果考试失利，我会认为是自己缺乏这方面的能力。"},
+                {id:15,type:"motivation",subType:"attribution",content:"我觉得学习成败主要靠运气或老师的评分标准。"},
+                {id:16,type:"motivation",subType:"attribution",content:"我相信通过改进学习方法，能提高自己的学习成绩。"},
+                {id:17,type:"motivation",subType:"stress",content:"我经常因为学习任务重而感到紧张焦虑。"},
+                {id:18,type:"motivation",subType:"stress",content:"面对考试或作业压力，我能保持平和的心态。"},
+                {id:19,type:"motivation",subType:"emotion",content:"我能清楚知道自己学习时的情绪（如开心、烦躁、疲惫）。"},
+                {id:20,type:"motivation",subType:"emotion",content:"当学习中感到情绪不好时，我有办法让自己平静下来继续学习。"},
+                // 学习策略（14题）
+                {id:21,type:"strategy",subType:"cognitive",content:"我会用画图、做笔记等方式帮助理解知识点。"},
+                {id:22,type:"strategy",subType:"cognitive",content:"学习新内容时，我会联系已经学过的知识进行对比。"},
+                {id:23,type:"strategy",subType:"cognitive",content:"我会把复杂的知识点拆成简单的部分逐步掌握。"},
+                {id:24,type:"strategy",subType:"cognitive",content:"我会通过背诵、默写等方式巩固需要记忆的内容。"},
+                {id:25,type:"strategy",subType:"cognitive",content:"遇到不懂的问题，我会主动查阅资料或请教他人。"},
+                {id:26,type:"strategy",subType:"cognitive",content:"我会用错题本整理错误，避免重复犯错。"},
+                {id:27,type:"strategy",subType:"cognitive",content:"学习完一个单元后，我会总结重点和规律。"},
+                {id:28,type:"strategy",subType:"metacognitive",content:"我会在学习前制定详细的学习计划（如先学什么、学多久）。"},
+                {id:29,type:"strategy",subType:"metacognitive",content:"学习过程中，我会检查自己是否真正理解了知识点。"},
+                {id:30,type:"strategy",subType:"metacognitive",content:"如果发现某种学习方法效果不好，我会及时更换。"},
+                {id:31,type:"strategy",subType:"metacognitive",content:"我会定期反思自己的学习情况，找出进步和不足。"},
+                {id:32,type:"strategy",subType:"metacognitive",content:"面对不同的学习任务（如背诵、计算、写作），我会用不同的方法。"},
+                {id:33,type:"strategy",subType:"metacognitive",content:"我能根据学习进度调整计划，不会拖延任务。"},
+                {id:34,type:"strategy",subType:"metacognitive",content:"考试前，我会有针对性地复习自己的薄弱环节。"},
+                // 学习习惯（14题）
+                {id:35,type:"habit",subType:"process",content:"我会每天固定时间进行学习，不会随意打乱。"},
+                {id:36,type:"habit",subType:"process",content:"学习时我会先完成重要的任务，再做次要的事情。"},
+                {id:37,type:"habit",subType:"process",content:"我会提前准备好学习用品，避免学习中分心。"},
+                {id:38,type:"habit",subType:"process",content:"我会在学习结束后整理书桌和学习资料。"},
+                {id:39,type:"habit",subType:"selfManage",content:"我能控制自己的上网、看电视时间，不影响学习。"},
+                {id:40,type:"habit",subType:"selfManage",content:"即使没有家长监督，我也能按时完成作业。"},
+                {id:41,type:"habit",subType:"selfManage",content:"我会合理安排学习和休息时间，不会过度疲劳。"},
+                {id:42,type:"habit",subType:"selfManage",content:"遇到诱惑（如想玩游戏）时，我能坚持先完成学习任务。"},
+                {id:43,type:"habit",subType:"selfManage",content:"我会主动承担自己的学习责任，不找借口逃避。"},
+                {id:44,type:"habit",subType:"focus",content:"做作业时，我能专注于任务，不轻易被周围的声音或事情干扰。"},
+                {id:45,type:"habit",subType:"focus",content:"上课时，我能跟着老师的思路走，很少开小差。"},
+                {id:46,type:"habit",subType:"focus",content:"我能长时间专注于一件学习任务（如看书、做题）。"},
+                {id:47,type:"habit",subType:"focus",content:"看书或做题时，我能快速进入状态，不浪费时间。"},
+                {id:48,type:"habit",subType:"focus",content:"完成学习任务时，我会认真仔细，很少因为粗心出错。"}
+            ],
+            reverseScore: [14,15,17],
+            themeMap: {motivation:"学习动力",strategy:"学习策略",habit:"学习习惯"},
+            subTypeMap: {
+                motive:"学习动机",goal:"学习目标",selfEfficacy:"自我效能感",attribution:"学业归因",
+                stress:"学习压力",emotion:"情绪智力",cognitive:"认知策略",metacognitive:"元认知策略",
+                process:"学习流程",selfManage:"自我管理",focus:"专注力"
+            },
+            storageKey: 'studentAssessmentRecords',
+            adminPwd: 'admin123'
+        };
+
+        // 全局状态
+        const state = {
+            currentQIndex: 0,
+            answers: {},
+            userData: {},
+            currentReport: null,
+            records: [],
+            charts: {main: null, report: null}
+        };
+
+        // DOM元素缓存
+        const els = {
+            // 页面容器
+            sections: {
+                cover: document.getElementById('coverSection'),
+                info: document.getElementById('infoSection'),
+                quiz: document.getElementById('quizSection'),
+                result: document.getElementById('resultSection')
+            },
+            // 按钮
+            btns: {
+                startTest: document.getElementById('startTestBtn'),
+                backToCover: document.getElementById('backToCoverBtn'),
+                startQuiz: document.getElementById('startQuizBtn'),
+                prev: document.getElementById('prevBtn'),
+                next: document.getElementById('nextBtn'),
+                restart: document.getElementById('restartBtn'),
+                downloadPdf: document.getElementById('downloadPdfBtn'),
+                adminEntry: document.getElementById('adminEntry'),
+                closeAdmin: document.getElementById('closeAdminModal'),
+                exportCsv: document.getElementById('exportCsvBtn'),
+                clearData: document.getElementById('clearDataBtn'),
+                closeReport: document.getElementById('closeReportModal'),
+                reportDownload: document.getElementById('reportDownloadPdfBtn')
+            },
+            // 答题区
+            quiz: {
+                progress: document.getElementById('progressBar'),
+                count: document.getElementById('questionCount'),
+                theme: document.getElementById('currentTheme'),
+                container: document.getElementById('questionContainer'),
+                options: document.getElementById('optionsContainer')
+            },
+            // 结果区
+            result: {
+                userInfo: document.getElementById('userInfo'),
+                testDate: document.getElementById('testDate'),
+                motivation: document.getElementById('motivationAnalysis'),
+                strategy: document.getElementById('strategyAnalysis'),
+                habit: document.getElementById('habitAnalysis'),
+                solution: document.getElementById('solutionList'),
+                chart: document.getElementById('radarChart')
+            },
+            // 管理员区
+            admin: {
+                modal: document.getElementById('adminModal'),
+                count: document.getElementById('recordCount'),
+                table: document.getElementById('recordTableBody')
+            },
+            // 报告模态框
+            report: {
+                modal: document.getElementById('reportModal'),
+                userInfo: document.getElementById('reportUserInfo'),
+                testDate: document.getElementById('reportTestDate'),
+                motivation: document.getElementById('reportMotivationAnalysis'),
+                strategy: document.getElementById('reportStrategyAnalysis'),
+                habit: document.getElementById('reportHabitAnalysis'),
+                solution: document.getElementById('reportSolutionList'),
+                chart: document.getElementById('reportRadarChart')
+            },
+            // 表单
+            form: {
+                name: document.getElementById('name'),
+                grade: document.getElementById('grade'),
+                school: document.getElementById('school'),
+                phone: document.getElementById('phone')
+            }
+        };
+
+        // 初始化
+        function init() {
+            // 设置当前日期
+            els.result.testDate.textContent = new Date().toLocaleDateString('zh-CN');
+            // 加载存储数据
+            loadRecords();
+            // 绑定事件
+            bindEvents();
+        }
+
+        // 事件绑定
+        function bindEvents() {
+            // 页面切换 - 重点优化了开始测评按钮的点击事件
+            els.btns.startTest.addEventListener('click', () => {
+                // 明确隐藏封面页并显示信息页
+                els.sections.cover.classList.remove('active');
+                els.sections.info.classList.add('active');
+                window.scrollTo(0, 0);
+            });
+            
+            els.btns.backToCover.addEventListener('click', () => {
+                els.sections.info.classList.remove('active');
+                els.sections.cover.classList.add('active');
+                window.scrollTo(0, 0);
+            });
+            
+            els.btns.startQuiz.addEventListener('click', validateForm);
+            els.btns.restart.addEventListener('click', resetApp);
+            
+            // 答题控制
+            els.btns.prev.addEventListener('click', () => changeQuestion(-1));
+            els.btns.next.addEventListener('click', () => changeQuestion(1));
+            
+            // PDF下载
+            els.btns.downloadPdf.addEventListener('click', () => downloadPdf(state.userData, els.result.testDate.textContent));
+            els.btns.reportDownload.addEventListener('click', () => {
+                if (state.currentReport) downloadPdf({
+                    name: state.currentReport.name,
+                    grade: state.currentReport.grade,
+                    school: state.currentReport.school,
+                    phone: state.currentReport.phone
+                }, state.currentReport.assessmentDate.split(' ')[0]);
+            });
+            
+            // 管理员功能
+            els.btns.adminEntry.addEventListener('click', checkAdmin);
+            els.btns.closeAdmin.addEventListener('click', () => els.admin.modal.classList.remove('active'));
+            els.btns.exportCsv.addEventListener('click', exportCsv);
+            els.btns.clearData.addEventListener('click', clearData);
+            els.btns.closeReport.addEventListener('click', () => {
+                els.report.modal.classList.remove('active');
+                if (state.charts.report) state.charts.report.destroy();
+            });
+            
+            // 点击模态框外部关闭
+            els.admin.modal.addEventListener('click', e => e.target === els.admin.modal && els.admin.modal.classList.remove('active'));
+            els.report.modal.addEventListener('click', e => {
+                if (e.target === els.report.modal) {
+                    els.report.modal.classList.remove('active');
+                    if (state.charts.report) state.charts.report.destroy();
+                }
+            });
+        }
+
+        // 显示指定页面（优化版）
+        function showSection(name) {
+            // 确保所有页面都先隐藏
+            Object.keys(els.sections).forEach(key => {
+                els.sections[key].classList.remove('active');
+            });
+            // 只显示目标页面
+            if (els.sections[name]) {
+                els.sections[name].classList.add('active');
+                window.scrollTo(0, 0);
+                
+                // 答题区初始化
+                if (name === 'quiz') {
+                    renderQuestion(state.currentQIndex);
+                    updateProgress();
+                }
+            }
+        }
+
+        // 验证表单
+        function validateForm() {
+            const {name, grade, school, phone} = els.form;
+            if (!name.value.trim() || !grade.value || !school.value.trim() || !phone.value.trim()) {
+                alert('请填写完整的基本信息！');
+                return;
+            }
+            
+            // 保存用户信息
+            state.userData = {
+                name: name.value.trim(),
+                grade: grade.value,
+                school: school.value.trim(),
+                phone: phone.value.trim()
+            };
+            
+            showSection('quiz');
+        }
+
+        // 渲染题目
+        function renderQuestion(index) {
+            const q = config.questions[index];
+            els.quiz.container.textContent = q.content;
+            els.quiz.count.textContent = `第 ${index + 1} 题 / 共 ${config.questions.length} 题`;
+            els.quiz.theme.textContent = `主题：${config.themeMap[q.type]} - ${config.subTypeMap[q.subType]}`;
+            
+            // 渲染选项
+            els.quiz.options.innerHTML = '';
+            ['完全不符合', '不太符合', '一般', '比较符合', '完全符合'].forEach((label, i) => {
+                const val = i + 1;
+                const div = document.createElement('div');
+                div.className = `option ${state.answers[q.id] === val ? 'selected' : ''}`;
+                div.textContent = label;
+                div.addEventListener('click', () => {
+                    document.querySelectorAll('.option').forEach(el => el.classList.remove('selected'));
+                    div.classList.add('selected');
+                    state.answers[q.id] = val;
+                });
+                els.quiz.options.appendChild(div);
+            });
+        }
+
+        // 更新进度条
+        function updateProgress() {
+            const progress = ((state.currentQIndex + 1) / config.questions.length) * 100;
+            els.quiz.progress.style.width = `${progress}%`;
+        }
+
+        // 切换题目
+        function changeQuestion(direction) {
+            const currentQ = config.questions[state.currentQIndex];
+            
+            // 下一题需验证答题
+            if (direction === 1 && !state.answers[currentQ.id]) {
+                alert('请选择一个选项后再继续！');
+                return;
+            }
+            
+            // 更新索引
+            state.currentQIndex += direction;
+            
+            // 边界处理
+            if (state.currentQIndex < 0) state.currentQIndex = 0;
+            if (state.currentQIndex >= config.questions.length) {
+                // 提交测评
+                const scores = calculateScores();
+                saveRecord(scores);
+                renderResult(scores);
+                showSection('result');
+                return;
+            }
+            
+            // 更新UI
+            renderQuestion(state.currentQIndex);
+            updateProgress();
+            els.btns.prev.disabled = state.currentQIndex === 0;
+            els.btns.next.innerHTML = state.currentQIndex === config.questions.length - 1 
+                ? '提交测评 <i class="fa-solid fa-check mr-2"></i>' 
+                : '下一题 <i class="fa-solid fa-arrow-right mr-2"></i>';
+        }
+
+        // 计算得分
+        function calculateScores(customAnswers = null) {
+            const answers = customAnswers || state.answers;
+            const scores = {
+                motivation: {total:0,count:0,sub:{}},
+                strategy: {total:0,count:0,sub:{}},
+                habit: {total:0,count:0,sub:{}}
+            };
+            
+            // 初始化子维度
+            Object.keys(config.subTypeMap).forEach(subType => {
+                const type = Object.keys(config.themeMap).find(t => {
+                    return config.questions.some(q => q.type === t && q.subType === subType);
+                });
+                if (type) {
+                    scores[type].sub[subType] = {total:0, count:0};
+                }
+            });
+            
+            // 计算得分（包含反向计分）
+            config.questions.forEach(q => {
+                let score = answers[q.id] || 0;
+                
+                // 反向计分题目
+                if (config.reverseScore.includes(q.id)) {
+                    score = 6 - score; // 5分制反向计分：1→5, 2→4, 3→3, 4→2, 5→1
+                }
+                
+                // 累加总分和子维度分
+                scores[q.type].total += score;
+                scores[q.type].count += 1;
+                scores[q.type].sub[q.subType].total += score;
+                scores[q.type].sub[q.subType].count += 1;
+            });
+            
+            // 计算平均分
+            Object.keys(scores).forEach(type => {
+                scores[type].avg = (scores[type].total / scores[type].count).toFixed(1);
+                
+                Object.keys(scores[type].sub).forEach(subType => {
+                    if (scores[type].sub[subType].count > 0) {
+                        scores[type].sub[subType].avg = (
+                            scores[type].sub[subType].total / scores[type].sub[subType].count
+                        ).toFixed(1);
+                    }
+                });
+            });
+            
+            return scores;
+        }
+
+        // 渲染结果
+        function renderResult(scores) {
+            // 显示用户信息
+            els.result.userInfo.innerHTML = `
+                <p><i class="fa-solid fa-user text-blue-500 mr-2"></i>姓名：${state.userData.name}</p>
+                <p><i class="fa-solid fa-graduation-cap text-blue-500 mr-2"></i>年级：${state.userData.grade}年级</p>
+                <p><i class="fa-solid fa-school text-blue-500 mr-2"></i>学校：${state.userData.school}</p>
+                <p><i class="fa-solid fa-phone text-blue-500 mr-2"></i>联系电话：${state.userData.phone}</p>
+            `;
+            
+            // 生成分析报告
+            generateAnalysis(scores);
+            
+            // 生成提升方案
+            generateSolutions(scores);
+            
+            // 绘制雷达图
+            drawRadarChart(scores, els.result.chart, 'main');
+        }
+
+        // 生成分析报告
+        function generateAnalysis(scores) {
+            // 学习动力分析
+            let motivationText = '';
+            if (scores.motivation.avg >= 4) {
+                motivationText = `${state.userData.name}同学在学习动力方面表现优秀！对学习有内在兴趣，能够设定合理目标并相信自己的能力。`;
+            } else if (scores.motivation.avg >= 3) {
+                motivationText = `${state.userData.name}同学在学习动力方面表现良好，但仍有提升空间。建议进一步培养内在学习兴趣，建立更明确的学习目标。`;
+            } else {
+                motivationText = `${state.userData.name}同学在学习动力方面需要重点提升。可以从建立短期小目标开始，体验学习成就感，逐步培养学习兴趣和自信心。`;
+            }
+            els.result.motivation.textContent = motivationText;
+            
+            // 学习策略分析
+            let strategyText = '';
+            if (scores.strategy.avg >= 4) {
+                strategyText = `${state.userData.name}同学掌握了有效的学习策略，能够灵活运用认知和元认知策略，学习效率较高。`;
+            } else if (scores.strategy.avg >= 3) {
+                strategyText = `${state.userData.name}同学已经掌握了一些学习策略，但应用不够系统。建议加强学习计划制定和学习反思，提高策略运用的针对性。`;
+            } else {
+                strategyText = `${state.userData.name}同学在学习策略方面需要加强。建议学习基本的笔记方法、复习技巧和计划制定方法，逐步形成适合自己的学习策略体系。`;
+            }
+            els.result.strategy.textContent = strategyText;
+            
+            // 学习习惯分析
+            let habitText = '';
+            if (scores.habit.avg >= 4) {
+                habitText = `${state.userData.name}同学拥有良好的学习习惯，能够保持专注并有效管理学习时间，为学习效果提供了有力保障。`;
+            } else if (scores.habit.avg >= 3) {
+                habitText = `${state.userData.name}同学的学习习惯总体尚可，但在某些方面仍需改进。建议固定学习时间，减少学习中的干扰，提高专注度。`;
+            } else {
+                habitText = `${state.userData.name}同学需要重点培养学习习惯。建议从建立每日学习时间表开始，逐步形成预习、复习、整理等良好学习流程，提高自我管理能力。`;
+            }
+            els.result.habit.textContent = habitText;
+        }
+
+        // 生成提升方案
+        function generateSolutions(scores) {
+            const solutions = [];
+            
+            // 找出需要提升的维度
+            const weakAreas = [];
+            if (scores.motivation.avg < 3.5) weakAreas.push({type: 'motivation', name: '学习动力'});
+            if (scores.strategy.avg < 3.5) weakAreas.push({type: 'strategy', name: '学习策略'});
+            if (scores.habit.avg < 3.5) weakAreas.push({type: 'habit', name: '学习习惯'});
+            
+            // 通用建议
+            solutions.push('每天保证30分钟的自主阅读时间，培养学习兴趣和专注力。');
+            
+            // 针对性建议
+            if (weakAreas.length > 0) {
+                weakAreas.forEach(area => {
+                    switch(area.type) {
+                        case 'motivation':
+                            solutions.push('建立"学习成就日记"，记录每天学会的新知识和小进步，增强自我效能感。');
+                            solutions.push('将大目标分解为每周可完成的小任务，每完成一个小任务给予自己适当奖励。');
+                            break;
+                        case 'strategy':
+                            solutions.push('学习使用思维导图整理知识点之间的联系，提高知识整合能力。');
+                            solutions.push('建立错题本，分析错误原因并定期复习，避免重复犯错。');
+                            break;
+                        case 'habit':
+                            solutions.push('制定固定的每日学习时间表，包括预习、复习和作业时间，形成规律。');
+                            solutions.push('学习时清理书桌，关闭电子设备通知，创造专注的学习环境。');
+                            break;
+                    }
+                });
+            } else {
+                solutions.push('尝试将学到的知识教给他人，通过输出巩固学习效果，进一步提升学习能力。');
+                solutions.push('设定更高层次的学习目标，如参加学科竞赛或完成挑战性学习项目。');
+            }
+            
+            // 显示建议
+            els.result.solution.innerHTML = solutions.map(s => `<li>${s}</li>`).join('');
+        }
+
+        // 绘制雷达图
+        function drawRadarChart(scores, canvas, chartKey) {
+            // 销毁已有图表
+            if (state.charts[chartKey]) {
+                state.charts[chartKey].destroy();
+            }
+            
+            // 准备数据
+            const labels = [
+                '学习动机', '学习目标', '自我效能感', 
+                '认知策略', '元认知策略',
+                '学习流程', '自我管理', '专注力'
+            ];
+            
+            const data = [
+                scores.motivation.sub.motive.avg,
+                scores.motivation.sub.goal.avg,
+                scores.motivation.sub.selfEfficacy.avg,
+                scores.strategy.sub.cognitive.avg,
+                scores.strategy.sub.metacognitive.avg,
+                scores.habit.sub.process.avg,
+                scores.habit.sub.selfManage.avg,
+                scores.habit.sub.focus.avg
+            ];
+            
+            // 创建图表
+            state.charts[chartKey] = new Chart(canvas, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '学习能力得分',
+                        data: data,
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 1,
+                            suggestedMax: 5
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // 保存记录
+        function saveRecord(scores) {
+            const record = {
+                id: Date.now(),
+                ...state.userData,
+                assessmentDate: new Date().toLocaleString(),
+                scores: scores,
+                answers: state.answers
+            };
+            
+            state.records.unshift(record);
+            localStorage.setItem(config.storageKey, JSON.stringify(state.records));
+            updateAdminRecords();
+        }
+
+        // 加载记录
+        function loadRecords() {
+            const saved = localStorage.getItem(config.storageKey);
+            state.records = saved ? JSON.parse(saved) : [];
+            updateAdminRecords();
+        }
+
+        // 更新管理员记录列表
+        function updateAdminRecords() {
+            els.admin.count.textContent = state.records.length;
+            els.admin.table.innerHTML = '';
+            
+            state.records.forEach((record, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${record.name}</td>
+                    <td>${record.grade}年级</td>
+                    <td>${record.school}</td>
+                    <td>${record.phone}</td>
+                    <td>${record.assessmentDate}</td>
+                    <td><button class="text-blue-600 hover:text-blue-800 view-report" data-id="${record.id}">查看报告</button></td>
+                `;
+                els.admin.table.appendChild(tr);
+            });
+            
+            // 绑定查看报告事件
+            document.querySelectorAll('.view-report').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    const record = state.records.find(r => r.id === id);
+                    if (record) showRecordReport(record);
+                });
+            });
+        }
+
+        // 显示记录报告
+        function showRecordReport(record) {
+            state.currentReport = record;
+            
+            // 填充信息
+            els.report.userInfo.innerHTML = `
+                <p><i class="fa-solid fa-user text-blue-500 mr-2"></i>姓名：${record.name}</p>
+                <p><i class="fa-solid fa-graduation-cap text-blue-500 mr-2"></i>年级：${record.grade}年级</p>
+                <p><i class="fa-solid fa-school text-blue-500 mr-2"></i>学校：${record.school}</p>
+                <p><i class="fa-solid fa-phone text-blue-500 mr-2"></i>联系电话：${record.phone}</p>
+            `;
+            els.report.testDate.textContent = record.assessmentDate.split(' ')[0];
+            
+            // 生成分析
+            els.report.motivation.textContent = generateAnalysisText(record.scores.motivation.avg, record.name, '学习动力');
+            els.report.strategy.textContent = generateAnalysisText(record.scores.strategy.avg, record.name, '学习策略');
+            els.report.habit.textContent = generateAnalysisText(record.scores.habit.avg, record.name, '学习习惯');
+            
+            // 生成提升方案
+            const solutions = generateSolutionsList(record.scores, record.name);
+            els.report.solution.innerHTML = solutions.map(s => `<li>${s}</li>`).join('');
+            
+            // 绘制图表
+            drawRadarChart(record.scores, els.report.chart, 'report');
+            
+            // 显示模态框
+            els.report.modal.classList.add('active');
+        }
+
+        // 生成分析文本（辅助函数）
+        function generateAnalysisText(avg, name, type) {
+            if (avg >= 4) {
+                return `${name}同学在${type}方面表现优秀！`;
+            } else if (avg >= 3) {
+                return `${name}同学在${type}方面表现良好，但仍有提升空间。`;
+            } else {
+                return `${name}同学在${type}方面需要重点提升。`;
+            }
+        }
+
+        // 生成提升方案列表（辅助函数）
+        function generateSolutionsList(scores, name) {
+            const solutions = [];
+            solutions.push('每天保证30分钟的自主阅读时间，培养学习兴趣和专注力。');
+            
+            if (scores.motivation.avg < 3.5) {
+                solutions.push('建立"学习成就日记"，记录每天学会的新知识和小进步。');
+            }
+            if (scores.strategy.avg < 3.5) {
+                solutions.push('学习使用思维导图整理知识点之间的联系。');
+            }
+            if (scores.habit.avg < 3.5) {
+                solutions.push('制定固定的每日学习时间表，形成规律的学习习惯。');
+            }
+            
+            return solutions;
+        }
+
+        // 检查管理员权限
+        function checkAdmin() {
+            const pwd = prompt('请输入管理员密码：');
+            if (pwd === config.adminPwd) {
+                els.admin.modal.classList.add('active');
+            } else if (pwd !== null) {
+                alert('密码错误！');
+            }
+        }
+
+        // 导出CSV
+        function exportCsv() {
+            if (state.records.length === 0) {
+                alert('没有可导出的数据！');
+                return;
+            }
+            
+            let csv = '姓名,年级,学校,电话,测评日期,学习动力,学习策略,学习习惯\n';
+            
+            state.records.forEach(record => {
+                csv += `"${record.name}",`;
+                csv += `"${record.grade}年级",`;
+                csv += `"${record.school}",`;
+                csv += `"${record.phone}",`;
+                csv += `"${record.assessmentDate}",`;
+                csv += `${record.scores.motivation.avg},`;
+                csv += `${record.scores.strategy.avg},`;
+                csv += `${record.scores.habit.avg}\n`;
+            });
+            
+            const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `学习能力测评数据_${new Date().toLocaleDateString()}.csv`);
+            a.style.visibility = 'hidden';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // 清空数据
+        function clearData() {
+            if (confirm('确定要清空所有测评数据吗？此操作不可恢复！')) {
+                localStorage.removeItem(config.storageKey);
+                state.records = [];
+                updateAdminRecords();
+                alert('数据已清空！');
+            }
+        }
+
+        // 重置应用
+        function resetApp() {
+            state.currentQIndex = 0;
+            state.answers = {};
+            state.userData = {};
+            
+            // 清空表单
+            els.form.name.value = '';
+            els.form.grade.value = '';
+            els.form.school.value = '';
+            els.form.phone.value = '';
+            
+            // 销毁图表
+            if (state.charts.main) {
+                state.charts.main.destroy();
+                state.charts.main = null;
+            }
+            
+            showSection('cover');
+        }
+
+        // 下载PDF报告
+        function downloadPdf(userData, date) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            
+            // 获取要导出的元素（根据当前是结果页还是报告模态框）
+            const targetElement = els.report.modal.classList.contains('active') 
+                ? document.querySelector('.report-content')
+                : document.querySelector('#resultSection .card');
+            
+            html2canvas(targetElement, {
+                scale: 2,
+                useCORS: true,
+                logging: false
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const imgWidth = 280;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                
+                doc.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
+                doc.save(`${userData.name}_${date}_学习能力测评报告.pdf`);
+            });
+        }
+
+        // 完成计算得分函数的定义（补充完整之前截断的代码）
+        function calculateScores(customAnswers = null) {
+            const answers = customAnswers || state.answers;
+            const scores = {
+                motivation: {total:0,count:0,sub:{}},
+                strategy: {total:0,count:0,sub:{}},
+                habit: {total:0,count:0,sub:{}}
+            };
+            
+            // 初始化子维度
+            Object.keys(config.subTypeMap).forEach(subType => {
+                const type = Object.keys(config.themeMap).find(t => {
+                    return config.questions.some(q => q.type === t && q.subType === subType);
+                });
+                if (type) {
+                    scores[type].sub[subType] = {total:0, count:0};
+                }
+            });
+            
+            // 计算得分（包含反向计分）
+            config.questions.forEach(q => {
+                let score = answers[q.id] || 0;
+                
+                // 反向计分题目
+                if (config.reverseScore.includes(q.id)) {
+                    score = 6 - score; // 5分制反向计分：1→5, 2→4, 3→3, 4→2, 5→1
+                }
+                
+                // 累加总分和子维度分
+                scores[q.type].total += score;
+                scores[q.type].count += 1;
+                scores[q.type].sub[q.subType].total += score;
+                scores[q.type].sub[q.subType].count += 1;
+            });
+            
+            // 计算平均分
+            Object.keys(scores).forEach(type => {
+                scores[type].avg = (scores[type].total / scores[type].count).toFixed(1);
+                
+                Object.keys(scores[type].sub).forEach(subType => {
+                    if (scores[type].sub[subType].count > 0) {
+                        scores[type].sub[subType].avg = (
+                            scores[type].sub[subType].total / scores[type].sub[subType].count
+                        ).toFixed(1);
+                    }
+                });
+            });
+            
+            return scores;
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
